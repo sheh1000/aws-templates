@@ -315,8 +315,7 @@ bastion_instance = t.add_resource(ec2.Instance(
     CreationPolicy=troposphere.policies.CreationPolicy(
         ResourceSignal=troposphere.policies.ResourceSignal(
             Timeout='PT15M')),
-    Tags=Tags(
-        Application=stack_tags),
+    Tags=stack_tags,
 ))
 
 
