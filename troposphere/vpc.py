@@ -1,7 +1,7 @@
 # Converted from VPC_With_VPN_Connection.template located at:
 # http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
 
-from troposphere import Parameter, Ref, Tags, Template, Output, Base64, GetAtt, FindInMap, Join
+from troposphere import Parameter, Ref, Tags, Template, Output, Base64, GetAtt, GetAZs, FindInMap, Join, Select
 from troposphere import ec2 as ec2
 import troposphere.policies
 import boto3
@@ -12,7 +12,7 @@ t = Template()
 t.add_version("2010-09-09")
 
 t.add_description("""\
-AWS CloudFormation Template:\
+AWS CloudFormation Sample Template:\
 Includes: VPC, Public subnet, Private subnet, Gateway\
 You will be billed for the AWS resources used if you create a stack from this template.\
 """)
@@ -195,6 +195,7 @@ subnet_public = t.add_resource(ec2.Subnet(
     CidrBlock=Ref(cidr_public),
     MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
+    AvailabilityZone=Select("0", GetAZs(""))
 ))
 
 subnet_private = t.add_resource(ec2.Subnet(
@@ -202,6 +203,7 @@ subnet_private = t.add_resource(ec2.Subnet(
     CidrBlock=Ref(cidr_private),
     MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
+    AvailabilityZone=Select("0", GetAZs(""))
 ))
 
 
@@ -388,6 +390,20 @@ instanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
     VpcId=Ref(stack_vpc),
 ))
 
+# DB Security groups
+dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
+    'DbSecurityGroup',
+    GroupDescription='For PostgreSQL in RDS service',
+    SecurityGroupIngress=[
+        ec2.SecurityGroupRule(
+            IpProtocol='tcp',
+            FromPort='5432',
+            ToPort='5432',
+            CidrIp=Ref(cidr_public))
+    ],
+    VpcId=Ref(stack_vpc),
+))
+
 # EC2 instances
 bastion_instance = t.add_resource(ec2.Instance(
     'BastionServerInstance',
@@ -457,6 +473,7 @@ t.add_output(Output(
     Value=GetAtt(bastion_instance, "PublicIp"),
 ))
 
+# validation
 cfclient = boto3.client(
     'cloudformation',
     aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
