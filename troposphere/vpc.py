@@ -4,6 +4,8 @@
 from troposphere import Parameter, Ref, Tags, Template, Output, Base64, GetAtt, FindInMap, Join
 from troposphere import ec2 as ec2
 import troposphere.policies
+import boto3
+import os
 
 t = Template()
 
@@ -250,6 +252,7 @@ private_route_association = t.add_resource(ec2.SubnetRouteTableAssociation(
 # routes for public table
 t.add_resource(ec2.Route(
     'PublicDefaultRoute',
+    DependsOn='InternetGateway',
     RouteTableId=Ref(rt_public),
     DestinationCidrBlock='0.0.0.0/0',
     GatewayId=Ref(igw),
@@ -258,6 +261,7 @@ t.add_resource(ec2.Route(
 # routes for private table
 t.add_resource(ec2.Route(
     'NatRoute',
+    DependsOn='Nat',
     RouteTableId=Ref(rt_private),
     DestinationCidrBlock='0.0.0.0/0',
     NatGatewayId=Ref(nat),
@@ -277,6 +281,16 @@ subnetNetworkAclAssociation = t.add_resource(ec2.SubnetNetworkAclAssociation(
 ))
 
 # outbound acls for Public network
+t.add_resource(ec2.NetworkAclEntry(
+        'sshOutbound',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='90',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='22', From='22'),
+        Egress='true',
+        RuleAction='allow',
+        CidrBlock='0.0.0.0/0',
+))
 t.add_resource(ec2.NetworkAclEntry(
         'OutBoundResponsePortsNetworkAclEntry',
         NetworkAclId=Ref(public_subnet_acl),
@@ -350,7 +364,17 @@ instanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
             IpProtocol='tcp',
             FromPort='22',
             ToPort='22',
-            CidrIp=Ref(sshlocation_param))
+            CidrIp=Ref(sshlocation_param)),
+        ec2.SecurityGroupRule(
+            IpProtocol='tcp',
+            FromPort='80',
+            ToPort='80',
+            CidrIp='0.0.0.0/0'),
+        ec2.SecurityGroupRule(
+            IpProtocol='tcp',
+            FromPort='443',
+            ToPort='443',
+            CidrIp='0.0.0.0/0')
     ],
     VpcId=Ref(stack_vpc),
 ))
@@ -368,16 +392,27 @@ bastion_instance = t.add_resource(ec2.Instance(
             'Arch')),
     InstanceType=Ref(instanceType_param),
     KeyName=Ref(keyname_param),
-    UserData=Base64(Join('', [
-        '#!/bin/bash -xe\n',
-        'yum update -y\n',
-        'yum update -y aws-cfn-bootstrap\n',
-        '# Signal the status of cfn-init\n',
-        '/opt/aws/bin/cfn-signal -e $? ',
-        '         --stack ', Ref('AWS::StackName'),
-        '         --resource WebServerInstance ',
-        '         --region ', Ref('AWS::Region'), '\n'
-    ])),
+    UserData=Base64(
+        Join(
+            '',
+            [
+                '#!/bin/bash -xe\n',
+                'yum update -y aws-cfn-bootstrap\n',
+                '/opt/aws/bin/cfn-init -v ',
+                '         --stack ',
+                Ref('AWS::StackName'),
+                '         --resource BastionServerInstance ',
+                '         --region ',
+                Ref('AWS::Region'),
+                '\n',
+                '/opt/aws/bin/cfn-signal -e $? ',
+                '         --stack ',
+                Ref('AWS::StackName'),
+                '         --resource BastionServerInstance ',
+                '         --region ',
+                Ref('AWS::Region'),
+                '\n',
+            ])),
     NetworkInterfaces=[
         ec2.NetworkInterfaceProperty(
             GroupSet=[
@@ -413,4 +448,15 @@ t.add_output(Output(
     Value=GetAtt(bastion_instance, "PublicIp"),
 ))
 
-print(t.to_json())
+cfclient = boto3.client(
+    'cloudformation',
+    aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+    aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    region_name='us-west-2'
+)
+response = cfclient.validate_template(TemplateBody=t.to_json())
+print(response)
+
+file = open('vpc.template', 'w')
+file.write(t.to_json())
+file.close()
