@@ -12,9 +12,9 @@ t = Template()
 t.add_version("2010-09-09")
 
 t.add_description("""\
-AWS CloudFormation Sample Template:\
-Includes:\
-VPC, Public subnet, Private subnet, Gateway\
+AWS CloudFormation Template:\
+Includes: VPC, Public subnet, Private subnet, Gateway\
+You will be billed for the AWS resources used if you create a stack from this template.\
 """)
 
 # ##################
