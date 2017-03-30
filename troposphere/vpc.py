@@ -353,7 +353,16 @@ t.add_resource(ec2.NetworkAclEntry(
         RuleAction='allow',
         CidrBlock='0.0.0.0/0',
 ))
-
+t.add_resource(ec2.NetworkAclEntry(
+        'inboundEphemeralPorts',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='130',
+        Protocol='6',
+        PortRange=ec2.PortRange(From='49152', To='65535'),
+        Egress='false',
+        RuleAction='allow',
+        CidrBlock=Ref(sshlocation_param),
+))
 
 # EC2 security groups
 instanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
@@ -423,7 +432,7 @@ bastion_instance = t.add_resource(ec2.Instance(
             SubnetId=Ref(subnet_public))],
     CreationPolicy=troposphere.policies.CreationPolicy(
         ResourceSignal=troposphere.policies.ResourceSignal(
-            Timeout='PT15M')),
+            Timeout='PT5M')),
     Tags=stack_tags,
 ))
 
