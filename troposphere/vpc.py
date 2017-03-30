@@ -61,7 +61,7 @@ cidr_private = t.add_parameter(Parameter(
 ))
 
 sshlocation_param = t.add_parameter(Parameter(
-    'SSHLocation',
+    'SSHLOCATION',
     Description=' The IP address range that can be used to SSH to the EC2 \
 instances',
     Type='String',
@@ -276,6 +276,70 @@ subnetNetworkAclAssociation = t.add_resource(ec2.SubnetNetworkAclAssociation(
     NetworkAclId=Ref(public_subnet_acl),
 ))
 
+# outbound acls for Public network
+t.add_resource(ec2.NetworkAclEntry(
+        'OutBoundResponsePortsNetworkAclEntry',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='100',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='65535', From='1024'),
+        Egress='true',
+        RuleAction='allow',
+        CidrBlock='0.0.0.0/0',
+))
+t.add_resource(ec2.NetworkAclEntry(
+        'httpOutbound',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='120',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='80', From='80'),
+        Egress='true',
+        RuleAction='allow',
+        CidrBlock='0.0.0.0/0',
+))
+t.add_resource(ec2.NetworkAclEntry(
+        'httpsOutbound',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='130',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='443', From='443'),
+        Egress='true',
+        RuleAction='allow',
+        CidrBlock='0.0.0.0/0',
+))
+
+# inbound acls for Public network
+t.add_resource(ec2.NetworkAclEntry(
+        'inboundSSHNetworkAclEntry',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='100',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='22', From='22'),
+        Egress='false',
+        RuleAction='allow',
+        CidrBlock=Ref(sshlocation_param),
+))
+t.add_resource(ec2.NetworkAclEntry(
+        'inboundHTTPNetworkAclEntry',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='110',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='80', From='80'),
+        Egress='false',
+        RuleAction='allow',
+        CidrBlock='0.0.0.0/0',
+))
+t.add_resource(ec2.NetworkAclEntry(
+        'inboundHTTPSNetworkAclEntry',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='120',
+        Protocol='6',
+        PortRange=ec2.PortRange(To='443', From='443'),
+        Egress='false',
+        RuleAction='allow',
+        CidrBlock='0.0.0.0/0',
+))
+
 
 # EC2 security groups
 instanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
@@ -304,6 +368,16 @@ bastion_instance = t.add_resource(ec2.Instance(
             'Arch')),
     InstanceType=Ref(instanceType_param),
     KeyName=Ref(keyname_param),
+    UserData=Base64(Join('', [
+        '#!/bin/bash -xe\n',
+        'yum update -y\n',
+        'yum update -y aws-cfn-bootstrap\n',
+        '# Signal the status of cfn-init\n',
+        '/opt/aws/bin/cfn-signal -e $? ',
+        '         --stack ', Ref('AWS::StackName'),
+        '         --resource WebServerInstance ',
+        '         --region ', Ref('AWS::Region'), '\n'
+    ])),
     NetworkInterfaces=[
         ec2.NetworkInterfaceProperty(
             GroupSet=[
