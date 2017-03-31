@@ -1,7 +1,7 @@
 # Converted from VPC_With_VPN_Connection.template located at:
 # http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
 
-from troposphere import Parameter, Ref, Tags, Template, Output, Base64, GetAtt, GetAZs, FindInMap, Join, Select
+from troposphere import Parameter, Ref, Tags, Template, Output, Base64, GetAtt, GetAZs, FindInMap, Join, Select, Sub, Export
 from troposphere import ec2 as ec2
 import troposphere.policies
 import boto3
@@ -471,6 +471,15 @@ t.add_output(Output(
     'PublicIP',
     Description="Public IP address of the newly created EC2 instance",
     Value=GetAtt(bastion_instance, "PublicIp"),
+))
+
+t.add_output(Output(
+    'DbSecurityGroup',
+    Description="Can be used for reference by rds.template",
+    Value=GetAtt(dbsecurityGroup, "GroupId"),
+    Export=Export(
+        Sub("${AWS::StackName}-DbSecurityGroupID")
+    )
 ))
 
 # validation

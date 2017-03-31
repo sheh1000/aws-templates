@@ -1,5 +1,5 @@
 
-from troposphere import Parameter, Ref, Template, GetAZs, Select
+from troposphere import Parameter, Ref, Template, GetAZs, Select, ImportValue, Sub
 from troposphere.rds import DBInstance
 import boto3
 import os
@@ -19,10 +19,14 @@ t.add_description(
 
 # ##################
 """ PARAMETERS """
-vpcid = t.add_parameter(Parameter(
-    "VPCid",
-    Description="VpcId of your existing Virtual Private Cloud (VPC)",
-    Type="String"
+network_stack = t.add_parameter(Parameter(
+    "NetworkStackName",
+    Description="Name of an active CloudFormation stack that contains the networking resources, "
+                "such as the subnet and security group, that will be used in this stack.",
+    Type="String",
+    MinLength="1",
+    MaxLength="255",
+    AllowedPattern="^[a-zA-Z][-a-zA-Z0-9]*$"
 ))
 
 dbuser = t.add_parameter(Parameter(
@@ -50,7 +54,6 @@ dbpassword = t.add_parameter(Parameter(
 
 dbidentifier = t.add_parameter(Parameter(
     "DBIdentifier",
-    NoEcho=True,
     Description="Specify a name that is unique for all DB instances owned "
                             "by your AWS account in the current region.",
     Type="String",
@@ -69,7 +72,6 @@ dbidentifier = t.add_parameter(Parameter(
 # ##################
 """ RESOURCES """
 
-
 mydb = t.add_resource(DBInstance(
     "MyDB",
     MultiAZ=False,
@@ -82,12 +84,10 @@ mydb = t.add_resource(DBInstance(
     PubliclyAccessible=False,
     DBInstanceIdentifier=Ref(dbidentifier),
     AvailabilityZone=Select("0", GetAZs("")),
-    VPCSecurityGroups=['DbSecurityGroup'],
+    VPCSecurityGroups=ImportValue(Sub("${NetworkStackName}-DbSecurityGroupID")),
 ))
 # ##################
 """ OUTPUTS """
-
-
 
 # ##################
 #  validation
