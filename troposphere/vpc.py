@@ -50,12 +50,24 @@ cidr_public = t.add_parameter(Parameter(
     Type="String",
 ))
 
-cidr_private = t.add_parameter(Parameter(
-    "PRIVATECIDR",
+cidr_private1 = t.add_parameter(Parameter(
+    "PRIVATECIDR1",
     ConstraintDescription=(
         "must be a valid IP CIDR range of the form x.x.x.x/x."),
     Description="IP Address range for the Private Subnet",
-    Default="10.1.2.0/24",
+    Default="10.1.2.0/25",
+    MinLength="9",
+    AllowedPattern="(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})",
+    MaxLength="18",
+    Type="String",
+))
+
+cidr_private2 = t.add_parameter(Parameter(
+    "PRIVATECIDR2",
+    ConstraintDescription=(
+        "must be a valid IP CIDR range of the form x.x.x.x/x."),
+    Description="IP Address range for the Private Subnet",
+    Default="10.1.2.128/25",
     MinLength="9",
     AllowedPattern="(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})",
     MaxLength="18",
@@ -190,6 +202,7 @@ stack_vpc = t.add_resource(
     )
 )
 
+# subnets:
 subnet_public = t.add_resource(ec2.Subnet(
     'PublicSubnet',
     CidrBlock=Ref(cidr_public),
@@ -198,13 +211,22 @@ subnet_public = t.add_resource(ec2.Subnet(
     AvailabilityZone=Select("0", GetAZs(""))
 ))
 
-subnet_private = t.add_resource(ec2.Subnet(
-    'PrivateSubnet',
-    CidrBlock=Ref(cidr_private),
+subnet_private1 = t.add_resource(ec2.Subnet(
+    'PrivateSubnet1',
+    CidrBlock=Ref(cidr_private1),
     MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
     AvailabilityZone=Select("0", GetAZs(""))
 ))
+
+subnet_private2 = t.add_resource(ec2.Subnet(
+    'PrivateSubnet2',
+    CidrBlock=Ref(cidr_private2),
+    MapPublicIpOnLaunch=False,
+    VpcId=Ref(stack_vpc),
+    AvailabilityZone=Select("1", GetAZs(""))
+))
+
 
 
 #  Internet gateway and NAT instances
@@ -238,15 +260,21 @@ rt_private = t.add_resource(ec2.RouteTable(
 ))
 
 # route associacions
-public_route_association = t.add_resource(ec2.SubnetRouteTableAssociation(
+t.add_resource(ec2.SubnetRouteTableAssociation(
     'PublicRouteAssociation',
     SubnetId=Ref(subnet_public),
     RouteTableId=Ref(rt_public),
 ))
 
-private_route_association = t.add_resource(ec2.SubnetRouteTableAssociation(
-    'PrivateRouteAssociation',
-    SubnetId=Ref(subnet_private),
+t.add_resource(ec2.SubnetRouteTableAssociation(
+    'PrivateRouteAssociation1',
+    SubnetId=Ref(subnet_private1),
+    RouteTableId=Ref(rt_private),
+))
+
+t.add_resource(ec2.SubnetRouteTableAssociation(
+    'PrivateRouteAssociation2',
+    SubnetId=Ref(subnet_private2),
     RouteTableId=Ref(rt_private),
 ))
 
@@ -298,7 +326,7 @@ t.add_resource(ec2.NetworkAclEntry(
         NetworkAclId=Ref(public_subnet_acl),
         RuleNumber='100',
         Protocol='6',
-        PortRange=ec2.PortRange(To='65535', From='1024'),
+        PortRange=ec2.PortRange(From='49152', To='65535'),
         Egress='true',
         RuleAction='allow',
         CidrBlock='0.0.0.0/0',
@@ -340,7 +368,7 @@ t.add_resource(ec2.NetworkAclEntry(
         NetworkAclId=Ref(public_subnet_acl),
         RuleNumber='110',
         Protocol='6',
-        PortRange=ec2.PortRange(To='80', From='80'),
+        PortRange=ec2.PortRange(From='80', To='80'),
         Egress='false',
         RuleAction='allow',
         CidrBlock='0.0.0.0/0',
@@ -350,7 +378,7 @@ t.add_resource(ec2.NetworkAclEntry(
         NetworkAclId=Ref(public_subnet_acl),
         RuleNumber='120',
         Protocol='6',
-        PortRange=ec2.PortRange(To='443', From='443'),
+        PortRange=ec2.PortRange(From='443', To='443'),
         Egress='false',
         RuleAction='allow',
         CidrBlock='0.0.0.0/0',
@@ -360,7 +388,7 @@ t.add_resource(ec2.NetworkAclEntry(
         NetworkAclId=Ref(public_subnet_acl),
         RuleNumber='130',
         Protocol='6',
-        PortRange=ec2.PortRange(From='49152', To='65535'),
+        PortRange=ec2.PortRange(From='1024', To='65535'),
         Egress='false',
         RuleAction='allow',
         CidrBlock=Ref(sshlocation_param),
@@ -483,11 +511,19 @@ t.add_output(Output(
 ))
 
 t.add_output(Output(
-    'PrivateSubnet',
-    Description="Privite network for reference by rds.template",
-    Value=Ref(subnet_private),
+    'PrivateSubnet1',
+    Description="Privite network1 for reference by rds.template",
+    Value=Ref(subnet_private1),
     Export=Export(
-        Sub("${AWS::StackName}-PrivateSubnet")
+        Sub("${AWS::StackName}-PrivateSubnet1")
+    )
+))
+t.add_output(Output(
+    'PrivateSubnet2',
+    Description="Privite network2 for reference by rds.template",
+    Value=Ref(subnet_private2),
+    Export=Export(
+        Sub("${AWS::StackName}-PrivateSubnet2")
     )
 ))
 

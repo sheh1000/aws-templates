@@ -75,7 +75,8 @@ subnet_group = t.add_resource(DBSubnetGroup(
     'DatabaseSubnetGroup',
     DBSubnetGroupDescription='RDS subnet group',
     SubnetIds=[
-        ImportValue(Sub("${NetworkStackName}-PrivateSubnet"))
+        ImportValue(Sub("${NetworkStackName}-PrivateSubnet1")),
+        ImportValue(Sub("${NetworkStackName}-PrivateSubnet2"))
     ]
 ))
 
