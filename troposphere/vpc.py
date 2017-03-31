@@ -433,7 +433,7 @@ dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
 ))
 
 # EC2 instances
-bastion_instance = t.add_resource(ec2.Instance(
+public_instance = t.add_resource(ec2.Instance(
     'BastionServerInstance',
     # Metadata=instance_metadata,
     ImageId=FindInMap(
@@ -498,7 +498,7 @@ t.add_output(Output(
 t.add_output(Output(
     'PublicIP',
     Description="Public IP address of the newly created EC2 instance",
-    Value=GetAtt(bastion_instance, "PublicIp"),
+    Value=GetAtt(public_instance, "PublicIp"),
 ))
 
 t.add_output(Output(
