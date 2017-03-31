@@ -1,6 +1,6 @@
 
 from troposphere import Parameter, Ref, Template, GetAZs, Select, ImportValue, Sub
-from troposphere.rds import DBInstance
+from troposphere.rds import DBInstance, DBSubnetGroup
 import boto3
 import os
 
@@ -71,6 +71,14 @@ dbidentifier = t.add_parameter(Parameter(
 # ##################
 """ RESOURCES """
 
+subnet_group = t.add_resource(DBSubnetGroup(
+    'DatabaseSubnetGroup',
+    DBSubnetGroupDescription='RDS subnet group',
+    SubnetIds=[
+        ImportValue(Sub("${AWS::StackName}-PrivateSubnet"))
+    ]
+))
+
 mydb = t.add_resource(DBInstance(
     "MyDB",
     MultiAZ=False,
@@ -83,6 +91,7 @@ mydb = t.add_resource(DBInstance(
     PubliclyAccessible=False,
     DBInstanceIdentifier=Ref(dbidentifier),
     AvailabilityZone=Select("0", GetAZs("")),
+    DBSubnetGroupName=Ref(subnet_group),
     VPCSecurityGroups=[
         ImportValue(Sub("${NetworkStackName}-DbSecurityGroupID"))
     ]

@@ -482,6 +482,15 @@ t.add_output(Output(
     )
 ))
 
+t.add_output(Output(
+    'PrivateSubnet',
+    Description="Privite network for reference by rds.template",
+    Value=Ref(subnet_private),
+    Export=Export(
+        Sub("${AWS::StackName}-PrivateSubnet")
+    )
+))
+
 # validation
 cfclient = boto3.client(
     'cloudformation',
