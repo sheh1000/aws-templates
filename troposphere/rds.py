@@ -31,7 +31,6 @@ network_stack = t.add_parameter(Parameter(
 
 dbuser = t.add_parameter(Parameter(
     "DBUser",
-    NoEcho=True,
     Description="The database admin account username",
     Type="String",
     MinLength="1",
@@ -84,7 +83,9 @@ mydb = t.add_resource(DBInstance(
     PubliclyAccessible=False,
     DBInstanceIdentifier=Ref(dbidentifier),
     AvailabilityZone=Select("0", GetAZs("")),
-    VPCSecurityGroups=ImportValue(Sub("${NetworkStackName}-DbSecurityGroupID")),
+    VPCSecurityGroups=[
+        ImportValue(Sub("${NetworkStackName}-DbSecurityGroupID"))
+    ]
 ))
 # ##################
 """ OUTPUTS """
