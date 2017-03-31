@@ -427,7 +427,7 @@ dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
             IpProtocol='tcp',
             FromPort='5432',
             ToPort='5432',
-            CidrIp=Ref(cidr_public))
+            CidrIp=Ref(instanceSecurityGroup))
     ],
     VpcId=Ref(stack_vpc),
 ))
