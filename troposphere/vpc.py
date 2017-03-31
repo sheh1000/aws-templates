@@ -446,9 +446,9 @@ bastion_instance = t.add_resource(ec2.Instance(
             DeviceIndex='0',
             DeleteOnTermination='true',
             SubnetId=Ref(subnet_public))],
-    CreationPolicy=troposphere.policies.CreationPolicy(
-        ResourceSignal=troposphere.policies.ResourceSignal(
-            Timeout='PT5M')),
+    # CreationPolicy=troposphere.policies.CreationPolicy(
+    #     ResourceSignal=troposphere.policies.ResourceSignal(
+    #         Timeout='PT5M')),
     Tags=stack_tags,
 ))
 

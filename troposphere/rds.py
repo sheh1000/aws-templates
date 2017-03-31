@@ -1,14 +1,8 @@
-# Converted from RDS_with_DBParameterGroup.template located at:
-# http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
 
-from troposphere import Parameter, Ref, Template
-from troposphere.rds import DBInstance, DBParameterGroup
-# Converted from RDS_with_DBParameterGroup.template located at:
-# http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
-
-from troposphere import Parameter, Ref, Template
-from troposphere.rds import DBInstance, DBParameterGroup
-
+from troposphere import Parameter, Ref, Template, GetAZs, Select
+from troposphere.rds import DBInstance
+import boto3
+import os
 
 t = Template()
 
@@ -74,14 +68,11 @@ dbidentifier = t.add_parameter(Parameter(
 
 # ##################
 """ RESOURCES """
-t.add_resource(DBSecurityGroup(
-    "DBSecurityGroup",
-    EC2VpcId=Ref(vpcid),
-    VPCSecurityGroups='DbSecurityGroup'
-))
+
 
 mydb = t.add_resource(DBInstance(
     "MyDB",
+    MultiAZ=False,
     AllocatedStorage="5",
     DBInstanceClass="db.t2.micro",
     StorageType="gp2",
@@ -89,11 +80,23 @@ mydb = t.add_resource(DBInstance(
     MasterUsername=Ref(dbuser),
     MasterUserPassword=Ref(dbpassword),
     PubliclyAccessible=False,
-    DBInstanceIdentifier=Ref(dbidentifier)
+    DBInstanceIdentifier=Ref(dbidentifier),
+    AvailabilityZone=Select("0", GetAZs("")),
+    VPCSecurityGroups=['DbSecurityGroup'],
 ))
 # ##################
 """ OUTPUTS """
 
+
+
+# ##################
+#  validation
+cfclient = boto3.client(
+    'cloudformation',
+    aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+    aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    region_name='us-west-2'
+)
 response = cfclient.validate_template(TemplateBody=t.to_json())
 print(response)
 
