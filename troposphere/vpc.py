@@ -395,7 +395,7 @@ t.add_resource(ec2.NetworkAclEntry(
 ))
 
 # EC2 security groups
-instanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
+publicInstanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
     'InstanceSecurityGroup',
     GroupDescription='Enable SSH access via port 22',
     SecurityGroupIngress=[
@@ -427,7 +427,7 @@ dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
             IpProtocol='tcp',
             FromPort='5432',
             ToPort='5432',
-            CidrIp=Ref(instanceSecurityGroup))
+            CidrIp=Ref(publicInstanceSecurityGroup))
     ],
     VpcId=Ref(stack_vpc),
 ))
@@ -469,7 +469,7 @@ bastion_instance = t.add_resource(ec2.Instance(
     NetworkInterfaces=[
         ec2.NetworkInterfaceProperty(
             GroupSet=[
-                Ref(instanceSecurityGroup)],
+                Ref(publicInstanceSecurityGroup)],
             AssociatePublicIpAddress='true',
             DeviceIndex='0',
             DeleteOnTermination='true',
