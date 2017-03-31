@@ -310,6 +310,30 @@ subnetNetworkAclAssociation = t.add_resource(ec2.SubnetNetworkAclAssociation(
     NetworkAclId=Ref(public_subnet_acl),
 ))
 
+# EC2 security groups
+publicInstanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
+    'InstanceSecurityGroup',
+    GroupDescription='Enable SSH access via port 22',
+    SecurityGroupIngress=[
+        ec2.SecurityGroupRule(
+            IpProtocol='tcp',
+            FromPort='22',
+            ToPort='22',
+            CidrIp=Ref(sshlocation_param)),
+        ec2.SecurityGroupRule(
+            IpProtocol='tcp',
+            FromPort='80',
+            ToPort='80',
+            CidrIp='0.0.0.0/0'),
+        ec2.SecurityGroupRule(
+            IpProtocol='tcp',
+            FromPort='443',
+            ToPort='443',
+            CidrIp='0.0.0.0/0')
+    ],
+    VpcId=Ref(stack_vpc),
+))
+
 # outbound acls for Public network
 t.add_resource(ec2.NetworkAclEntry(
         'sshOutbound',
@@ -351,6 +375,27 @@ t.add_resource(ec2.NetworkAclEntry(
         RuleAction='allow',
         CidrBlock='0.0.0.0/0',
 ))
+t.add_resource(ec2.NetworkAclEntry(
+        'postgresOutbound1',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='140',
+        Protocol='6',
+        PortRange=ec2.PortRange(From='5432', To='5432'),
+        Egress='true',
+        RuleAction='allow',
+        CidrBlock=Ref(cidr_private1)
+))
+t.add_resource(ec2.NetworkAclEntry(
+        'postgresOutbound2',
+        NetworkAclId=Ref(public_subnet_acl),
+        RuleNumber='150',
+        Protocol='6',
+        PortRange=ec2.PortRange(From='5432', To='5432'),
+        Egress='true',
+        RuleAction='allow',
+        CidrBlock=Ref(cidr_private2)
+))
+
 
 # inbound acls for Public network
 t.add_resource(ec2.NetworkAclEntry(
@@ -386,7 +431,7 @@ t.add_resource(ec2.NetworkAclEntry(
 t.add_resource(ec2.NetworkAclEntry(
         'inboundEphemeralPorts',
         NetworkAclId=Ref(public_subnet_acl),
-        RuleNumber='130',
+        RuleNumber='140',
         Protocol='6',
         PortRange=ec2.PortRange(From='1024', To='65535'),
         Egress='false',
@@ -394,29 +439,7 @@ t.add_resource(ec2.NetworkAclEntry(
         CidrBlock=Ref(sshlocation_param),
 ))
 
-# EC2 security groups
-publicInstanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
-    'InstanceSecurityGroup',
-    GroupDescription='Enable SSH access via port 22',
-    SecurityGroupIngress=[
-        ec2.SecurityGroupRule(
-            IpProtocol='tcp',
-            FromPort='22',
-            ToPort='22',
-            CidrIp=Ref(sshlocation_param)),
-        ec2.SecurityGroupRule(
-            IpProtocol='tcp',
-            FromPort='80',
-            ToPort='80',
-            CidrIp='0.0.0.0/0'),
-        ec2.SecurityGroupRule(
-            IpProtocol='tcp',
-            FromPort='443',
-            ToPort='443',
-            CidrIp='0.0.0.0/0')
-    ],
-    VpcId=Ref(stack_vpc),
-))
+
 
 # DB Security groups
 dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
@@ -427,7 +450,7 @@ dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
             IpProtocol='tcp',
             FromPort='5432',
             ToPort='5432',
-            CidrIp=Ref(publicInstanceSecurityGroup))
+            CidrIp=Ref(cidr_public))
     ],
     VpcId=Ref(stack_vpc),
 ))
