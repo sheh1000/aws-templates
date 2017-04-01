@@ -1,6 +1,7 @@
 # Converted from VPC_With_VPN_Connection.template located at:
 # http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
 
+from troposphere import AWS_ACCOUNT_ID, AWS_REGION, AWS_STACK_ID, AWS_STACK_NAME, AWS_NO_VALUE
 from troposphere import Parameter, Ref, Tags, Template, Output, Base64, GetAtt, GetAZs, FindInMap, Join, Select, Sub, Export
 from troposphere import ec2 as ec2
 import troposphere.policies
@@ -208,7 +209,8 @@ subnet_public = t.add_resource(ec2.Subnet(
     CidrBlock=Ref(cidr_public),
     MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
-    AvailabilityZone=Select("0", GetAZs(""))
+    AvailabilityZone=Select("0", GetAZs("")),
+    Tags=Tags(Name='PublicSubnet')
 ))
 
 subnet_private1 = t.add_resource(ec2.Subnet(
@@ -216,7 +218,8 @@ subnet_private1 = t.add_resource(ec2.Subnet(
     CidrBlock=Ref(cidr_private1),
     MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
-    AvailabilityZone=Select("0", GetAZs(""))
+    AvailabilityZone=Select("0", GetAZs("")),
+    Tags=Tags(Name='PrivateSubnet1')
 ))
 
 subnet_private2 = t.add_resource(ec2.Subnet(
@@ -224,9 +227,9 @@ subnet_private2 = t.add_resource(ec2.Subnet(
     CidrBlock=Ref(cidr_private2),
     MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
-    AvailabilityZone=Select("1", GetAZs(""))
+    AvailabilityZone=Select("1", GetAZs("")),
+    Tags=Tags(Name='PrivateSubnet1')
 ))
-
 
 
 #  Internet gateway and NAT instances
@@ -250,13 +253,13 @@ nat = t.add_resource(ec2.NatGateway(
 rt_public = t.add_resource(ec2.RouteTable(
     "RouteTablePublic",
     VpcId=Ref(stack_vpc),
-    Tags=stack_tags,
+    Tags=Tags(Name='PublicRoutes')
 ))
 
 rt_private = t.add_resource(ec2.RouteTable(
     'RouteTablePrivate',
     VpcId=Ref(stack_vpc),
-    Tags=stack_tags,
+    Tags=Tags(Name='PrivateRoutes')
 ))
 
 # route associacions
@@ -297,19 +300,6 @@ t.add_resource(ec2.Route(
     NatGatewayId=Ref(nat),
 ))
 
-# network acls
-public_subnet_acl = t.add_resource(ec2.NetworkAcl(
-    'NetworkAcl',
-    VpcId=Ref(stack_vpc),
-    Tags=stack_tags,
-))
-
-subnetNetworkAclAssociation = t.add_resource(ec2.SubnetNetworkAclAssociation(
-    'SubnetNetworkAclAssociation',
-    SubnetId=Ref(subnet_public),
-    NetworkAclId=Ref(public_subnet_acl),
-))
-
 # EC2 security groups
 publicInstanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
     'InstanceSecurityGroup',
@@ -332,6 +322,20 @@ publicInstanceSecurityGroup = t.add_resource(ec2.SecurityGroup(
             CidrIp='0.0.0.0/0')
     ],
     VpcId=Ref(stack_vpc),
+    Tags=Tags(Name='PublicSecurityGroup')
+))
+
+# network acls
+public_subnet_acl = t.add_resource(ec2.NetworkAcl(
+    'PublicACL',
+    VpcId=Ref(stack_vpc),
+    Tags=Tags(Name='PublicACL')
+))
+
+subnetNetworkAclAssociation = t.add_resource(ec2.SubnetNetworkAclAssociation(
+    'SubnetNetworkAclAssociation',
+    SubnetId=Ref(subnet_public),
+    NetworkAclId=Ref(public_subnet_acl),
 ))
 
 # outbound acls for Public network
@@ -453,6 +457,7 @@ dbsecurityGroup = t.add_resource(ec2.SecurityGroup(
             CidrIp=Ref(cidr_public))
     ],
     VpcId=Ref(stack_vpc),
+    Tags=Tags(Name='PostgresSecurityGroup')
 ))
 
 # EC2 instances
@@ -500,7 +505,7 @@ public_instance = t.add_resource(ec2.Instance(
     # CreationPolicy=troposphere.policies.CreationPolicy(
     #     ResourceSignal=troposphere.policies.ResourceSignal(
     #         Timeout='PT5M')),
-    Tags=stack_tags,
+    Tags=Tags(Name=Sub('${AWS::StackName}-web'))
 ))
 
 
