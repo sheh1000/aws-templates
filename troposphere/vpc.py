@@ -39,6 +39,14 @@ cidr_vpc = t.add_parameter(Parameter(
     Type="String",
 ))
 
+param_assign_public_ip = t.add_parameter(Parameter(
+    'AutoAssignPublicIp',
+    Description='Automatically assign instance with a Public IP.',
+    AllowedValues=['true', 'false'],
+    Default='true',
+    Type='String'
+))
+
 cidr_public = t.add_parameter(Parameter(
     "PUBLICCIDR",
     ConstraintDescription=(
@@ -206,8 +214,8 @@ stack_vpc = t.add_resource(
 # subnets:
 subnet_public = t.add_resource(ec2.Subnet(
     'PublicSubnet',
+    MapPublicIpOnLaunch=Ref(param_assign_public_ip),
     CidrBlock=Ref(cidr_public),
-    MapPublicIpOnLaunch=False,
     VpcId=Ref(stack_vpc),
     AvailabilityZone=Select("0", GetAZs("")),
     Tags=Tags(Name='PublicSubnet')
