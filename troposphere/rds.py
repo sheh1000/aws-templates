@@ -1,5 +1,5 @@
 
-from troposphere import Parameter, Ref, Template, GetAZs, Select, ImportValue, Sub
+from troposphere import Parameter, Ref, Template, GetAZs, Select, ImportValue, Sub, Tags
 from troposphere.rds import DBInstance, DBSubnetGroup
 import boto3
 import os
@@ -95,7 +95,8 @@ mydb = t.add_resource(DBInstance(
     DBSubnetGroupName=Ref(subnet_group),
     VPCSecurityGroups=[
         ImportValue(Sub("${NetworkStackName}-DbSecurityGroupID"))
-    ]
+    ],
+    Tags=Tags(Name=Sub('${AWS::StackName}-db'))
 ))
 # ##################
 """ OUTPUTS """
