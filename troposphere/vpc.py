@@ -448,7 +448,7 @@ t.add_resource(ec2.NetworkAclEntry(
         PortRange=ec2.PortRange(From='1024', To='65535'),
         Egress='false',
         RuleAction='allow',
-        CidrBlock=Ref(sshlocation_param),
+        CidrBlock='0.0.0.0/0',
 ))
 
 
